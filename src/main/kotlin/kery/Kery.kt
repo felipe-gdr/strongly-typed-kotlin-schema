@@ -70,11 +70,10 @@ fun <T : Field> Field.doInit(field: T, init: T.() -> Unit): T {
     return field
 }
 
-class Query : Field("query")
+class Query(name: String?) : Field("query${if(name != null) " $name" else ""}")
 
 // TODO: Add support to aliases (https://graphql.org/learn/queries/#aliases)
-// TODO: Add support to operation names in queries (https://graphql.org/learn/queries/#operation-name)
-fun query(init: Query.() -> Unit): String = Query().apply(init).toString()
+fun query(name: String? = null, init: Query.() -> Unit): String = Query(name).apply(init).toString()
 
 // ---- Domain specific: GitHub ---- //
 class Viewer : Field("viewer") {

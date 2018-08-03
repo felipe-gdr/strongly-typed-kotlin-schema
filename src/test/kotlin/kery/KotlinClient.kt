@@ -36,4 +36,21 @@ class KotlinClient {
             }
         }
     }
+
+    @Test fun when__query_name_is_used__then_generated_query_string_contains_it() {
+        val expected = "query MyQuery { viewer { login, name, email, pullRequests(last:5) { id } } }"
+
+        val result = query("MyQuery") {
+            viewer {
+                login
+                name
+                email
+                pullRequests(last = 5) {
+                    id
+                }
+            }
+        }
+
+        assertEquals(expected, result)
+    }
 }
