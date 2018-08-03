@@ -53,4 +53,21 @@ class KotlinClient {
 
         assertEquals(expected, result)
     }
+
+    @Test fun when__fields_have_aliases__then_generated_query_string_contains_aliases() {
+        val expected = "query { aViewer: viewer { aLogin: login, myName: name, someEmail: email, aPullRequest: pullRequests(last:5) { theBestId: id } } }"
+
+        val result = query {
+            viewer(alias="aViewer") {
+                login(alias="aLogin")
+                name(alias="myName")
+                email(alias="someEmail")
+                pullRequests(last = 5, alias="aPullRequest") {
+                    id(alias="theBestId")
+                }
+            }
+        }
+
+        assertEquals(expected, result)
+    }
 }

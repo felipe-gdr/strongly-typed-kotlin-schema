@@ -4,24 +4,32 @@ import java.util.*
 
 // TODO: Add KDoc based on introspection results
 
-// TODO: create two base classes (Object and Field), one for fields with mandatory children (e.g. graphql.pullRequests) and
-//       one for fields with no children (e.g. name, email, login)
 // TODO: Add support to directives (https://graphql.org/learn/queries/#directives)
 // TODO: Add support to interfaces (https://graphql.org/learn/schema/#interfaces)
 // TODO: Add support to inline fragments (https://graphql.org/learn/queries/#inline-fragments)
 // TODO: Add support to metafields (https://graphql.org/learn/queries/#meta-fields)
-open class Field(val fieldName: String) {
-    val children: MutableList<Field> = ArrayList()
-    val arguments: MutableList<Argument> = ArrayList()
-
+open class Field(val fieldName: String, private val alias: String? = null) {
+    private val arguments: MutableList<Argument> = ArrayList()
     override fun toString(): String {
-        return fieldName +
-                (if (arguments.isEmpty()) "" else arguments.joinToString(separator = ",", prefix = "(", postfix = ")")) +
-                (if (children.isEmpty()) "" else children.joinToString(separator = ", ", prefix = " { ", postfix = " }"))
+        return "${if (alias != null) "$alias: " else ""}$fieldName" +
+                (if (arguments.isEmpty()) "" else arguments.joinToString(separator = ",", prefix = "(", postfix = ")"))
+    }
+
+    fun <T : Field> T.set(name: String, value: Any?): T {
+        if (value != null) {
+            val argument = Argument(name, value)
+
+            if (arguments.contains(argument)) {
+                throw IllegalStateException("Duplicated argument ${argument.name} found for ${this.fieldName}")
+            }
+
+            arguments.add(argument)
+        }
+        return this
     }
 
     override fun equals(other: Any?): Boolean {
-        if(other is Field) {
+        if (other is Field) {
             return other.fieldName == fieldName
         }
 
@@ -31,12 +39,33 @@ open class Field(val fieldName: String) {
     override fun hashCode(): Int = fieldName.hashCode()
 }
 
+open class Object(fieldName: String, alias: String? = null) : Field(fieldName, alias) {
+    private val children: MutableList<Field> = ArrayList()
+
+    fun <T : Field> doInit(field: T, init: T.() -> Unit = {}): T {
+        field.init()
+
+        if (children.contains(field)) {
+            throw IllegalStateException("Duplicated child field ${field.fieldName} found for ${this.fieldName}")
+        }
+
+        children.add(field)
+
+        return field
+    }
+
+    override fun toString(): String {
+        return super.toString() +
+                (if (children.isEmpty()) "" else children.joinToString(separator = ", ", prefix = " { ", postfix = " }"))
+    }
+}
+
 // TODO: add support to variables in Arguments (https://graphql.org/learn/queries/#variables)
-class Argument(val name: String, val value: Any) {
+class Argument(val name: String, private val value: Any) {
     override fun toString() = "$name:$value"
 
     override fun equals(other: Any?): Boolean {
-        if(other is Argument) {
+        if (other is Argument) {
             return other.name == name
         }
 
@@ -46,70 +75,49 @@ class Argument(val name: String, val value: Any) {
     override fun hashCode(): Int = name.hashCode()
 }
 
-fun <T : Field> T.set(name: String, value: Any?): T {
-    if (value != null) {
-        val argument = Argument(name, value)
+class Query(name: String?) : Object("query${if (name != null) " $name" else ""}")
 
-        if(arguments.contains(argument)) {
-            throw IllegalStateException("Duplicated argument ${argument.name} found for ${this.fieldName}")
-        }
-
-        arguments.add(argument)
-    }
-    return this
-}
-
-fun <T : Field> Field.doInit(field: T, init: T.() -> Unit): T {
-    field.init()
-
-    if(children.contains(field)) {
-        throw IllegalStateException("Duplicated child field ${field.fieldName} found for ${this.fieldName}")
-    }
-
-    children.add(field)
-    return field
-}
-
-class Query(name: String?) : Field("query${if(name != null) " $name" else ""}")
-
-// TODO: Add support to aliases (https://graphql.org/learn/queries/#aliases)
 fun query(name: String? = null, init: Query.() -> Unit): String = Query(name).apply(init).toString()
 
 // ---- Domain specific: GitHub ---- //
-class Viewer : Field("viewer") {
-    fun email(): Email? = email
-    fun login(): Login? = login
-    fun name(): Name? = name
+
+fun Query.viewer(alias: String? = null, init: Viewer.() -> Unit) = doInit(Viewer(alias), init)
+
+class Viewer(alias: String? = null) : Object("viewer", alias) {
+    class Login(alias: String? = null) : Field("login", alias)
+    class Email(alias: String? = null) : Field("email", alias)
+    class Name(alias: String? = null) : Field("name", alias)
+
+    fun login(alias: String? = null) = doInit(Login(alias))
+    fun email(alias: String? = null) = doInit(Email(alias))
+    fun name(alias: String? = null) = doInit(Name(alias))
 
     var email: Email? = null
         get() {
-            return doInit(Email()) {}
+            return doInit(Email())
         }
     var login: Login? = null
         get() {
-            return doInit(Login()) {}
+            return doInit(Login())
         }
     var name: Name? = null
         get() {
-            return doInit(Name()) {}
+            return doInit(Name())
         }
 
-    fun Viewer.pullRequests(first: Int? = null, last: Int? = null, init: PullRequests.() -> Unit) =
-            doInit(PullRequests(), init).set("first", first).set("last", last)
+    fun pullRequests(alias: String? = null, first: Int? = null, last: Int? = null, init: PullRequests.() -> Unit) =
+            doInit(PullRequests(alias), init).set("first", first).set("last", last)
 
 }
 
-class Login : Field("login")
-class Email : Field("email")
-class Name : Field("name")
-class Id : Field("id")
-class PullRequests : Field("pullRequests") {
+class PullRequests(alias: String? = null) : Object("pullRequests", alias) {
+    class Id(alias: String? = null) : Field("id", alias)
+
+    fun id(alias: String? = null) = doInit(Id(alias))
     var id: Id? = null
         get() {
             return doInit(Id()) {}
         }
-    fun id(): Id? = id
 }
 
-fun Query.viewer(init: Viewer.() -> Unit) = doInit(Viewer(), init)
 
