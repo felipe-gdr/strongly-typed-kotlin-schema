@@ -2,8 +2,14 @@ package kery
 
 import java.util.*
 
-// TODO: create two base classes, one for fields with mandatory children (e.g. graphql.pullRequests) and
+// TODO: Add KDoc based on introspection results
+
+// TODO: create two base classes (Object and Field), one for fields with mandatory children (e.g. graphql.pullRequests) and
 //       one for fields with no children (e.g. name, email, login)
+// TODO: Add support to directives (https://graphql.org/learn/queries/#directives)
+// TODO: Add support to interfaces (https://graphql.org/learn/schema/#interfaces)
+// TODO: Add support to inline fragments (https://graphql.org/learn/queries/#inline-fragments)
+// TODO: Add support to metafields (https://graphql.org/learn/queries/#meta-fields)
 open class Field(val fieldName: String) {
     val children: MutableList<Field> = ArrayList()
     val attributes: MutableList<Attribute> = ArrayList()
@@ -25,6 +31,8 @@ open class Field(val fieldName: String) {
     override fun hashCode(): Int = fieldName.hashCode()
 }
 
+// TODO: rename Attribute to Argument
+// TODO: add support to variables in Arguments (https://graphql.org/learn/queries/#variables)
 class Attribute(val name: String, val value: Any) {
     override fun toString() = "$name:$value"
 
@@ -65,7 +73,8 @@ fun <T : Field> Field.doInit(field: T, init: T.() -> Unit): T {
 
 class Query : Field("query")
 
-
+// TODO: Add support to aliases (https://graphql.org/learn/queries/#aliases)
+// TODO: Add support to operation names in queries (https://graphql.org/learn/queries/#operation-name)
 fun query(init: Query.() -> Unit): String = Query().apply(init).toString()
 
 // ---- Domain specific: GitHub ---- //
@@ -86,10 +95,6 @@ class Viewer : Field("viewer") {
         get() {
             return doInit(Name()) {}
         }
-
-//    fun pullRequests(first: Int? = null, last: Int? = null, init: PullRequests.() -> Unit) {
-//        pullRequests(first, last, init)
-//    }
 
     fun Viewer.pullRequests(first: Int? = null, last: Int? = null, init: PullRequests.() -> Unit) =
             doInit(PullRequests(), init).set("first", first).set("last", last)
