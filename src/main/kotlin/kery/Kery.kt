@@ -12,11 +12,11 @@ import java.util.*
 // TODO: Add support to metafields (https://graphql.org/learn/queries/#meta-fields)
 open class Field(val fieldName: String) {
     val children: MutableList<Field> = ArrayList()
-    val attributes: MutableList<Attribute> = ArrayList()
+    val arguments: MutableList<Argument> = ArrayList()
 
     override fun toString(): String {
         return fieldName +
-                (if (attributes.isEmpty()) "" else attributes.joinToString(separator = ",", prefix = "(", postfix = ")")) +
+                (if (arguments.isEmpty()) "" else arguments.joinToString(separator = ",", prefix = "(", postfix = ")")) +
                 (if (children.isEmpty()) "" else children.joinToString(separator = ", ", prefix = " { ", postfix = " }"))
     }
 
@@ -31,13 +31,12 @@ open class Field(val fieldName: String) {
     override fun hashCode(): Int = fieldName.hashCode()
 }
 
-// TODO: rename Attribute to Argument
 // TODO: add support to variables in Arguments (https://graphql.org/learn/queries/#variables)
-class Attribute(val name: String, val value: Any) {
+class Argument(val name: String, val value: Any) {
     override fun toString() = "$name:$value"
 
     override fun equals(other: Any?): Boolean {
-        if(other is Attribute) {
+        if(other is Argument) {
             return other.name == name
         }
 
@@ -49,13 +48,13 @@ class Attribute(val name: String, val value: Any) {
 
 fun <T : Field> T.set(name: String, value: Any?): T {
     if (value != null) {
-        val attribute = Attribute(name, value)
+        val argument = Argument(name, value)
 
-        if(attributes.contains(attribute)) {
-            throw IllegalStateException("Duplicated attribute ${attribute.name} found for ${this.fieldName}")
+        if(arguments.contains(argument)) {
+            throw IllegalStateException("Duplicated argument ${argument.name} found for ${this.fieldName}")
         }
 
-        attributes.add(attribute)
+        arguments.add(argument)
     }
     return this
 }
