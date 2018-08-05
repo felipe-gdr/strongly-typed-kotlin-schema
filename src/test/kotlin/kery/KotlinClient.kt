@@ -74,6 +74,27 @@ class KotlinClient {
     }
 
     @Test
+    fun when__same_field_is_declared_twice_with_different_aliases__then_generated_string_contains_both_definitions() {
+        val expected = "query { aViewer: viewer { login, name, email, pullRequests(last:5) { id } }, anotherViewer: viewer { login } }"
+
+        val result = query {
+            viewer(alias = "aViewer") {
+                login
+                name
+                email
+                pullRequests(last = 5) {
+                    id
+                }
+            }
+            viewer(alias = "anotherViewer") {
+                login
+            }
+        }
+
+        assertEquals(expected, result)
+    }
+
+    @Test
     fun when__fragment_is_defined__then_resulting_string_contains_fragment_syntax() {
         val expected = "fragment viewerFragment on Viewer { login, name }"
 
@@ -114,6 +135,27 @@ class KotlinClient {
            viewer {
                useFragment(fragment)
            }
+        }
+
+        assertEquals(expected, result)
+    }
+
+    @Test
+    fun when__fragment_is_used_twice_in_query__then_resulting_string_contains_two_usages_and_just_one_fragment_definition() {
+        val expected = "query { aViewer: viewer { ...viewerFragment }, anotherViewer: viewer { ...viewerFragment } } fragment viewerFragment on Viewer { login, name }"
+
+        val fragment = fragment(name = "viewerFragment", on = Viewer::class) {
+            login
+            name
+        }
+
+        val result = query {
+            viewer(alias = "aViewer") {
+                useFragment(fragment)
+            }
+            viewer(alias = "anotherViewer") {
+                useFragment(fragment)
+            }
         }
 
         assertEquals(expected, result)

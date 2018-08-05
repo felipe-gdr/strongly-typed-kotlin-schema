@@ -1,6 +1,5 @@
 package kery
 
-import java.util.*
 import kotlin.reflect.KClass
 import kotlin.reflect.full.createInstance
 
@@ -26,38 +25,41 @@ open class Field(val fieldName: String, private val alias: String? = null) {
         return this
     }
 
-    fun argumentsToString(): String = (if (arguments.isEmpty()) "" else arguments.joinToString(separator = ",", prefix = "(", postfix = ")"))
+    private fun argumentsToString(): String = (if (arguments.isEmpty()) "" else arguments.joinToString(separator = ",", prefix = "(", postfix = ")"))
 
     override fun toString(): String {
         return "${if (alias != null) "$alias: " else ""}$fieldName" + argumentsToString()
 
     }
 
-
     override fun equals(other: Any?): Boolean {
         if (other is Field) {
-            return other.fieldName == fieldName
+            return other.fieldName == fieldName && other.alias == alias
         }
 
         return false
     }
 
-    override fun hashCode(): Int = fieldName.hashCode()
+    override fun hashCode(): Int = fieldName.hashCode() * 31 + (alias?.hashCode() ?: 0)
 }
 
-open class Object(fieldName: String, alias: String? = null) : Field(fieldName, alias) {
+open class Object(fieldName: String, private val parent: Object? = null, alias: String? = null) : Field(fieldName, alias) {
     val children: MutableList<Field> = ArrayList()
 
     fun <T : Field> doInit(field: T, init: T.() -> Unit = {}): T {
         field.init()
 
         if (children.contains(field)) {
-            throw IllegalStateException("Duplicated child field ${field.fieldName} found for ${this.fieldName}")
+            throw IllegalStateException("Duplicated child field '${field.fieldName}' found for '${this.fieldName}'")
         }
 
         children.add(field)
 
         return field
+    }
+
+    open fun <T : Object> addFragment(fragment: Fragment<T>) {
+        parent?.addFragment(fragment)
     }
 
     fun childrenToString(): String = (if (children.isEmpty()) "" else children.joinToString(separator = ", ", prefix = " { ", postfix = " }"))
@@ -84,11 +86,25 @@ class Argument(val name: String, private val value: Any) {
     override fun hashCode(): Int = name.hashCode()
 }
 
-class Query(name: String?) : Object("query${if (name != null) " $name" else ""}")
+class Query(name: String?) : Object("query${if (name != null) " $name" else ""}") {
+    private val fragments: MutableCollection<Fragment<out Object>> = ArrayList()
+
+    override fun <T : Object> addFragment(fragment: Fragment<T>) {
+        if(!fragments.contains(fragment)) {
+            fragments.add(fragment)
+        }
+    }
+
+    private fun fragmentsToString(): String = (if (fragments.isEmpty()) "" else fragments.joinToString(separator = " ", prefix = " "))
+
+    override fun toString(): String {
+        return super.toString() + fragmentsToString()
+    }
+}
 
 fun query(name: String? = null, init: Query.() -> Unit): String = Query(name).apply(init).toString()
 
-class Fragment<T : Object>(val name: String, val of: T) {
+data class Fragment<T : Object>(val name: String, val of: T) {
     override fun toString(): String {
         return "fragment $name on ${of::class.simpleName}${of.childrenToString()}"
     }
@@ -97,6 +113,8 @@ class Fragment<T : Object>(val name: String, val of: T) {
 fun <T : Object> fragment(name: String, on: KClass<T>, init: T.() -> Unit): Fragment<T> = Fragment(name, of = on.createInstance().apply(init))
 
 fun <T : Object> T.useFragment(fragment: Fragment<T>) {
+    addFragment(fragment)
+
     children.add(object : Field(fragment.name) {
         override fun toString(): String = "...$fieldName"
     })
@@ -105,9 +123,9 @@ fun <T : Object> T.useFragment(fragment: Fragment<T>) {
 
 // ---- Domain specific: GitHub ---- //
 
-fun Query.viewer(alias: String? = null, init: Viewer.() -> Unit) = doInit(Viewer(alias), init)
+fun Query.viewer(alias: String? = null, init: Viewer.() -> Unit) = doInit(Viewer(this, alias), init)
 
-class Viewer(alias: String? = null) : Object("viewer", alias) {
+class Viewer(parent: Object? = null, alias: String? = null) : Object("viewer", parent, alias) {
     class Login(alias: String? = null) : Field("login", alias)
     class Email(alias: String? = null) : Field("email", alias)
     class Name(alias: String? = null) : Field("name", alias)
@@ -130,17 +148,17 @@ class Viewer(alias: String? = null) : Object("viewer", alias) {
         }
 
     fun pullRequests(alias: String? = null, first: Int? = null, last: Int? = null, init: PullRequests.() -> Unit) =
-            doInit(PullRequests(alias), init).set("first", first).set("last", last)
+            doInit(PullRequests(this, alias), init).set("first", first).set("last", last)
 
 }
 
-class PullRequests(alias: String? = null) : Object("pullRequests", alias) {
+class PullRequests(parent: Object, alias: String? = null) : Object("pullRequests", parent, alias) {
     class Id(alias: String? = null) : Field("id", alias)
 
     fun id(alias: String? = null) = doInit(Id(alias))
     var id: Id? = null
         get() {
-            return doInit(Id()) {}
+            return doInit(Id())
         }
 }
 
