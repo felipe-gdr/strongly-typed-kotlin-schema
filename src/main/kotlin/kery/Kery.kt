@@ -1,6 +1,8 @@
 package kery
 
 import java.util.*
+import kotlin.reflect.KClass
+import kotlin.reflect.full.createInstance
 
 // TODO: Add KDoc based on introspection results
 
@@ -10,10 +12,6 @@ import java.util.*
 // TODO: Add support to metafields (https://graphql.org/learn/queries/#meta-fields)
 open class Field(val fieldName: String, private val alias: String? = null) {
     private val arguments: MutableList<Argument> = ArrayList()
-    override fun toString(): String {
-        return "${if (alias != null) "$alias: " else ""}$fieldName" +
-                (if (arguments.isEmpty()) "" else arguments.joinToString(separator = ",", prefix = "(", postfix = ")"))
-    }
 
     fun <T : Field> T.set(name: String, value: Any?): T {
         if (value != null) {
@@ -28,6 +26,14 @@ open class Field(val fieldName: String, private val alias: String? = null) {
         return this
     }
 
+    fun argumentsToString(): String = (if (arguments.isEmpty()) "" else arguments.joinToString(separator = ",", prefix = "(", postfix = ")"))
+
+    override fun toString(): String {
+        return "${if (alias != null) "$alias: " else ""}$fieldName" + argumentsToString()
+
+    }
+
+
     override fun equals(other: Any?): Boolean {
         if (other is Field) {
             return other.fieldName == fieldName
@@ -40,7 +46,7 @@ open class Field(val fieldName: String, private val alias: String? = null) {
 }
 
 open class Object(fieldName: String, alias: String? = null) : Field(fieldName, alias) {
-    private val children: MutableList<Field> = ArrayList()
+    val children: MutableList<Field> = ArrayList()
 
     fun <T : Field> doInit(field: T, init: T.() -> Unit = {}): T {
         field.init()
@@ -54,11 +60,14 @@ open class Object(fieldName: String, alias: String? = null) : Field(fieldName, a
         return field
     }
 
+    fun childrenToString(): String = (if (children.isEmpty()) "" else children.joinToString(separator = ", ", prefix = " { ", postfix = " }"))
+
     override fun toString(): String {
-        return super.toString() +
-                (if (children.isEmpty()) "" else children.joinToString(separator = ", ", prefix = " { ", postfix = " }"))
+        return super.toString() + childrenToString()
+
     }
 }
+
 
 // TODO: add support to variables in Arguments (https://graphql.org/learn/queries/#variables)
 class Argument(val name: String, private val value: Any) {
@@ -78,6 +87,21 @@ class Argument(val name: String, private val value: Any) {
 class Query(name: String?) : Object("query${if (name != null) " $name" else ""}")
 
 fun query(name: String? = null, init: Query.() -> Unit): String = Query(name).apply(init).toString()
+
+class Fragment<T : Object>(val name: String, val of: T) {
+    override fun toString(): String {
+        return "fragment $name on ${of::class.simpleName}${of.childrenToString()}"
+    }
+}
+
+fun <T : Object> fragment(name: String, on: KClass<T>, init: T.() -> Unit): Fragment<T> = Fragment(name, of = on.createInstance().apply(init))
+
+fun <T : Object> T.useFragment(fragment: Fragment<T>) {
+    children.add(object : Field(fragment.name) {
+        override fun toString(): String = "...$fieldName"
+    })
+}
+
 
 // ---- Domain specific: GitHub ---- //
 
