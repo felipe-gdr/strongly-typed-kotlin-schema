@@ -1,4 +1,4 @@
-package kery
+package builder
 
 import kotlin.reflect.KClass
 import kotlin.reflect.full.createInstance
