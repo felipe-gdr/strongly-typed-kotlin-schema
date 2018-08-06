@@ -124,8 +124,10 @@ fun <T : Object> T.useFragment(fragment: Fragment<T>) {
 fun Query.viewer(alias: String? = null, init: Viewer.() -> Unit) = doInit(Viewer(this, alias), init)
 
 // TODO: avoid having the type and the field share the same class hierarchy. This is bad, it allows, for example, the
-// consumer to create a fragment using the type () as the "class type"
-abstract class User(fieldName: String, parent: Object? = null, alias: String? = null) : Object(fieldName, parent, alias) {
+// consumer to create a fragment using the field object () as the "class type"
+open class User(fieldName: String, parent: Object? = null, alias: String? = null) : Object(fieldName, parent, alias) {
+    constructor() : this("fragment")
+
     class Login(alias: String? = null) : Field("login", alias)
     class Email(alias: String? = null) : Field("email", alias)
     class Name(alias: String? = null) : Field("name", alias)

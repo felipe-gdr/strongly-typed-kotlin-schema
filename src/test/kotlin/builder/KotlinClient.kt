@@ -152,9 +152,9 @@ class KotlinClient {
 
     @Test
     fun when__fragment_is_used_twice_in_query__then_resulting_string_contains_two_usages_and_just_one_fragment_definition() {
-        val expected = "query { aViewer: viewer { ...viewerFragment }, anotherViewer: viewer { ...viewerFragment } } fragment viewerFragment on Viewer { login, name }"
+        val expected = "query { aViewer: viewer { ...viewerFragment }, anotherViewer: viewer { ...viewerFragment } } fragment viewerFragment on User { login, name }"
 
-        val fragment = fragment(name = "viewerFragment", on = Viewer::class) {
+        val fragment = fragment(name = "viewerFragment", on = User::class) {
             login
             name
         }
