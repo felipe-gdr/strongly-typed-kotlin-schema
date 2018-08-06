@@ -44,16 +44,16 @@ open class Field(val fieldName: String, private val alias: String? = null) {
 }
 
 open class Object(fieldName: String, private val parent: Object? = null, alias: String? = null) : Field(fieldName, alias) {
-    val children: MutableList<Field> = ArrayList()
+    val fields: MutableList<Field> = ArrayList()
 
     fun <T : Field> doInit(field: T, init: T.() -> Unit = {}): T {
         field.init()
 
-        if (children.contains(field)) {
+        if (fields.contains(field)) {
             throw IllegalStateException("Duplicated child field '${field.fieldName}' found for '${this.fieldName}'")
         }
 
-        children.add(field)
+        fields.add(field)
 
         return field
     }
@@ -62,14 +62,12 @@ open class Object(fieldName: String, private val parent: Object? = null, alias: 
         parent?.addFragment(fragment)
     }
 
-    fun childrenToString(): String = (if (children.isEmpty()) "" else children.joinToString(separator = ", ", prefix = " { ", postfix = " }"))
+    fun fieldsToString(): String = (if (fields.isEmpty()) "" else fields.joinToString(separator = ", ", prefix = " { ", postfix = " }"))
 
     override fun toString(): String {
-        return super.toString() + childrenToString()
-
+        return super.toString() + fieldsToString()
     }
 }
-
 
 // TODO: add support to variables in Arguments (https://graphql.org/learn/queries/#variables)
 class Argument(val name: String, private val value: Any) {
@@ -106,7 +104,7 @@ fun query(name: String? = null, init: Query.() -> Unit): String = Query(name).ap
 
 data class Fragment<T : Object>(val name: String, val of: T) {
     override fun toString(): String {
-        return "fragment $name on ${of::class.simpleName}${of.childrenToString()}"
+        return "fragment $name on ${of::class.simpleName}${of.fieldsToString()}"
     }
 }
 
@@ -115,7 +113,7 @@ fun <T : Object> fragment(name: String, on: KClass<T>, init: T.() -> Unit): Frag
 fun <T : Object> T.useFragment(fragment: Fragment<T>) {
     addFragment(fragment)
 
-    children.add(object : Field(fragment.name) {
+    fields.add(object : Field(fragment.name) {
         override fun toString(): String = "...$fieldName"
     })
 }
@@ -125,7 +123,9 @@ fun <T : Object> T.useFragment(fragment: Fragment<T>) {
 
 fun Query.viewer(alias: String? = null, init: Viewer.() -> Unit) = doInit(Viewer(this, alias), init)
 
-class Viewer(parent: Object? = null, alias: String? = null) : Object("viewer", parent, alias) {
+// TODO: avoid having the type and the field share the same class hierarchy. This is bad, it allows, for example, the
+// consumer to create a fragment using the type () as the "class type"
+abstract class User(fieldName: String, parent: Object? = null, alias: String? = null) : Object(fieldName, parent, alias) {
     class Login(alias: String? = null) : Field("login", alias)
     class Email(alias: String? = null) : Field("email", alias)
     class Name(alias: String? = null) : Field("name", alias)
@@ -147,19 +147,33 @@ class Viewer(parent: Object? = null, alias: String? = null) : Object("viewer", p
             return doInit(Name())
         }
 
-    fun pullRequests(alias: String? = null, first: Int? = null, last: Int? = null, init: PullRequests.() -> Unit) =
-            doInit(PullRequests(this, alias), init).set("first", first).set("last", last)
+    fun pullRequests(alias: String? = null, first: Int? = null, last: Int? = null, init: PullRequestConnection.() -> Unit) =
+            doInit(PullRequestConnection(this, alias), init)
+                    .set("first", first)
+                    .set("last", last)
 
 }
+class Viewer(parent: Object? = null, alias: String? = null) : User("viewer", parent, alias)
 
-class PullRequests(parent: Object, alias: String? = null) : Object("pullRequests", parent, alias) {
+class PullRequestConnection(parent: Object, alias: String? = null) : Object("pullRequests", parent, alias) {
+    fun nodes(alias: String? = null, init: PullRequest.() -> Unit) =
+            doInit(PullRequest(this, alias), init)
+}
+
+class PullRequest(parent: Object, alias: String? = null) : Object("nodes", parent, alias) {
+    class Body(alias: String? = null) : Field("body", alias)
     class Id(alias: String? = null) : Field("id", alias)
 
+    fun body(alias: String? = null) = doInit(Body(alias))
     fun id(alias: String? = null) = doInit(Id(alias))
+
+    var body: Body? = null
+        get() {
+            return doInit(Body())
+        }
+
     var id: Id? = null
         get() {
             return doInit(Id())
         }
 }
-
-

@@ -7,7 +7,7 @@ class KotlinClient {
 
     @Test
     fun when__structure_is_correct__then_string_is_correctly_built() {
-        val expected = "query { viewer { login, name, email, pullRequests(last:5) { id } } }"
+        val expected = "query { viewer { login, name, email, pullRequests(last:5) { nodes { body } } } }"
 
         val result = query {
             viewer {
@@ -15,7 +15,9 @@ class KotlinClient {
                 name
                 email
                 pullRequests(last = 5) {
-                    id
+                    nodes {
+                        body
+                    }
                 }
             }
         }
@@ -39,7 +41,7 @@ class KotlinClient {
 
     @Test
     fun when__query_name_is_used__then_generated_query_string_contains_it() {
-        val expected = "query MyQuery { viewer { login, name, email, pullRequests(last:5) { id } } }"
+        val expected = "query MyQuery { viewer { login, name, email, pullRequests(last:5) { nodes { body } } } }"
 
         val result = query("MyQuery") {
             viewer {
@@ -47,7 +49,9 @@ class KotlinClient {
                 name
                 email
                 pullRequests(last = 5) {
-                    id
+                    nodes {
+                        body
+                    }
                 }
             }
         }
@@ -57,7 +61,7 @@ class KotlinClient {
 
     @Test
     fun when__fields_have_aliases__then_generated_query_string_contains_aliases() {
-        val expected = "query { aViewer: viewer { aLogin: login, myName: name, someEmail: email, aPullRequest: pullRequests(last:5) { theBestId: id } } }"
+        val expected = "query { aViewer: viewer { aLogin: login, myName: name, someEmail: email, aPullRequest: pullRequests(last:5) { nodes { aBody: body } } } }"
 
         val result = query {
             viewer(alias = "aViewer") {
@@ -65,7 +69,9 @@ class KotlinClient {
                 name(alias = "myName")
                 email(alias = "someEmail")
                 pullRequests(last = 5, alias = "aPullRequest") {
-                    id(alias = "theBestId")
+                    nodes {
+                        body(alias = "aBody")
+                    }
                 }
             }
         }
@@ -75,7 +81,7 @@ class KotlinClient {
 
     @Test
     fun when__same_field_is_declared_twice_with_different_aliases__then_generated_string_contains_both_definitions() {
-        val expected = "query { aViewer: viewer { login, name, email, pullRequests(last:5) { id } }, anotherViewer: viewer { login } }"
+        val expected = "query { aViewer: viewer { login, name, email, pullRequests(last:5) { nodes { body } } }, anotherViewer: viewer { login } }"
 
         val result = query {
             viewer(alias = "aViewer") {
@@ -83,7 +89,9 @@ class KotlinClient {
                 name
                 email
                 pullRequests(last = 5) {
-                    id
+                    nodes {
+                        body
+                    }
                 }
             }
             viewer(alias = "anotherViewer") {
@@ -108,14 +116,16 @@ class KotlinClient {
 
     @Test
     fun when__fragment_is_define_together_with_aliases__then_generated_query_string_contains_fragment_and_aliases() {
-        val expected = "fragment viewerFragment on Viewer { aLogin: login, myName: name, someEmail: email, aPullRequest: pullRequests(last:5) { theBestId: id } }"
+        val expected = "fragment viewerFragment on Viewer { aLogin: login, myName: name, someEmail: email, aPullRequest: pullRequests(last:5) { nodes { body } } }"
 
         val viewerFragment = fragment(name = "viewerFragment", on = Viewer::class) {
             login(alias = "aLogin")
             name(alias = "myName")
             email(alias = "someEmail")
             pullRequests(last = 5, alias = "aPullRequest") {
-                id(alias = "theBestId")
+                nodes {
+                    body
+                }
             }
         }
 
