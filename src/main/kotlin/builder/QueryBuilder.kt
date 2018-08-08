@@ -66,8 +66,10 @@ fun <T : Field<*>> T.set(name: String, value: Any?): T {
 }
 
 
-open class Object<T : ObjectType>(type: T, private val parent: Object<*>? = null, name: String, alias: String? = null) : Field<T>(type, name, alias) {
-    open fun addFragment(fragment: Fragment<out Object<*>>) {
+open class Object<T : ObjectType>(type: T, private val parent: Object<out ObjectType>? = null, name: String, alias: String? = null) : Field<T>(type, name, alias) {
+    open fun addFragment(fragment: Fragment<out ObjectType>) {
+        // TODO stop add references to parent with the single goal of supporting fragments.
+        // maybe add a reference to the query all the way down the field tree
         parent?.addFragment(fragment)
     }
 }
@@ -90,9 +92,9 @@ class Argument(val name: String, private val value: Any) {
 class QueryType : ObjectType()
 
 class Query(queryName: String?) : Object<QueryType>(QueryType(), name = "query${if (queryName != null) " $queryName" else ""}") {
-    private val fragments: MutableCollection<Fragment<out Object<out ObjectType>>> = ArrayList()
+    private val fragments: MutableCollection<Fragment<out ObjectType>> = ArrayList()
 
-    override fun addFragment(fragment: Fragment<out Object<*>>) {
+    override fun addFragment(fragment: Fragment<out ObjectType>) {
         if (!fragments.contains(fragment)) {
             fragments.add(fragment)
         }
@@ -107,15 +109,16 @@ class Query(queryName: String?) : Object<QueryType>(QueryType(), name = "query${
 
 fun query(name: String? = null, init: Query.() -> Unit): String = Query(name).apply(init).toString()
 
-data class Fragment<T : Object<out ObjectType>>(val name: String, val of: T) {
+data class Fragment<T : ObjectType>(val name: String, val of: T) {
     override fun toString(): String {
-        return "fragment $name on ${of::class.simpleName}${of.type.fieldsToString()}"
+        return "fragment $name on ${of::class.simpleName}${of.fieldsToString()}"
     }
 }
 
-fun <T : Object<out ObjectType>> fragment(name: String, on: KClass<T>, init: T.() -> Unit): Fragment<T> = Fragment(name, of = on.createInstance().apply(init))
+// TODO add support to fragments that use fragments.
+fun <T : ObjectType> fragment(name: String, on: KClass<T>, init: T.() -> Unit): Fragment<T> = Fragment(name, of = on.createInstance().apply(init))
 
-fun <T : Object<out ObjectType>> T.useFragment(fragment: Fragment<T>) {
+fun <T : ObjectType, O : Object<T>> O.useFragment(fragment: Fragment<T>) {
     addFragment(fragment)
 
     type.fields.add(object : Field<ScalarType>(ScalarType(), fragment.name) {
@@ -126,11 +129,9 @@ fun <T : Object<out ObjectType>> T.useFragment(fragment: Fragment<T>) {
 
 // ---- Domain specific: GitHub ---- //
 
-fun Query.viewer(alias: String? = null, init: Viewer.() -> Unit) = type.doInit(Viewer(alias), init)
+fun Query.viewer(alias: String? = null, init: Viewer.() -> Unit) = type.doInit(Viewer(alias = alias, parent = this), init)
 
-// TODO: avoid having the type and the field share the same class hierarchy. This is bad, it allows, for example, the
-// consumer to create a fragment using the field object () as the "class type"
-open class UserType : ObjectType() {
+open class User : ObjectType() {
     class Login(alias: String? = null) : Field<ScalarType>(ScalarType(), "login", alias)
     class Email(alias: String? = null) : Field<ScalarType>(ScalarType(), "email", alias)
     class Name(alias: String? = null) : Field<ScalarType>(ScalarType(), "name", alias)
@@ -142,47 +143,48 @@ open class UserType : ObjectType() {
     var email: Email? = null
         get() = email()
 
-    var login: UserType.Login? = null
+    var login: User.Login? = null
         get() = login()
 
     var name: Name? = null
         get() = name()
 
-    fun pullRequests(alias: String? = null, first: Int? = null, last: Int? = null, init: PullRequestConnection.() -> Unit) =
-            doInit(PullRequestConnection(alias), init)
+    fun pullRequests(parent: Object<*>? = null, alias: String? = null, first: Int? = null, last: Int? = null, init: PullRequestConnection.() -> Unit) =
+            doInit(PullRequestConnection(parent, alias), init)
                     .set("first", first)
                     .set("last", last)
 
 }
 
-class Viewer(alias: String? = null) : Field<UserType>(UserType(), "viewer", alias) {
+class Viewer(parent: Object<*>, alias: String? = null) : Object<User>(User(), parent, "viewer", alias) {
     fun login(alias: String? = null) = type.login(alias)
     fun email(alias: String? = null) = type.email(alias)
     fun name(alias: String? = null) = type.name(alias)
 
-    var email: UserType.Email? = null
+    var email: User.Email? = null
         get() = type.email
 
-    var login: UserType.Login? = null
+    var login: User.Login? = null
         get() = type.login
 
-    var name: UserType.Name? = null
+    var name: User.Name? = null
         get() = type.name
 
     fun pullRequests(alias: String? = null, first: Int? = null, last: Int? = null, init: PullRequestConnection.() -> Unit) =
-            type.pullRequests(alias, first, last, init)
+            type.pullRequests(this, alias, first, last, init)
 }
 
-class PullRequestConnectionType() : ObjectType() {
-    fun nodes(alias: String? = null, init: PullRequest.() -> Unit) =
-            doInit(PullRequest(alias), init)
+class PullRequestConnectionType : ObjectType() {
+    fun nodes(parent:Object<*>, alias: String? = null, init: PullRequestNode.() -> Unit) =
+            doInit(PullRequestNode(parent, alias), init)
 }
 
-class PullRequestConnection(alias: String? = null) : Field<PullRequestConnectionType>(PullRequestConnectionType(), "pullRequests", alias) {
-    fun nodes(alias: String? = null, init: PullRequest.() -> Unit) = type.nodes(alias, init)
+class PullRequestConnection(parent: Object<*>?, alias: String? = null) :
+        Object<PullRequestConnectionType>(PullRequestConnectionType(), parent = parent, name = "pullRequests", alias = alias) {
+    fun nodes(alias: String? = null, init: PullRequestNode.() -> Unit) = type.nodes(this, alias, init)
 }
 
-class PullRequestType : ObjectType() {
+class PullRequest : ObjectType() {
     class Body(alias: String? = null) : Field<ScalarType>(ScalarType(), "body", alias)
     class Id(alias: String? = null) : Field<ScalarType>(ScalarType(), "id", alias)
 
@@ -196,13 +198,13 @@ class PullRequestType : ObjectType() {
         get() = id()
 }
 
-class PullRequest(alias: String? = null) : Field<PullRequestType>(PullRequestType(), "nodes", alias) {
+class PullRequestNode(parent: Object<*>, alias: String? = null) : Object<PullRequest>(PullRequest(), parent, "nodes", alias) {
     fun body(alias: String? = null) = type.body(alias)
     fun id(alias: String? = null) = type.id(alias)
 
-    var body: PullRequestType.Body? = null
+    var body: PullRequest.Body? = null
         get() = type.body
 
-    var id: PullRequestType.Id? = null
+    var id: PullRequest.Id? = null
         get() = type.id
 }

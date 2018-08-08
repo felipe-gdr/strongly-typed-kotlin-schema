@@ -93,7 +93,7 @@ class KotlinClient {
                 pullRequests(last = 5, alias = "aPullRequest") {
                     nodes {
                         body(alias = "aBody")
-                        id(alias= "pullRequestId")
+                        id(alias = "pullRequestId")
                     }
                 }
             }
@@ -125,72 +125,128 @@ class KotlinClient {
         assertEquals(expected, result)
     }
 
-//    @Test
-//    fun when__fragment_is_defined__then_resulting_string_contains_fragment_syntax() {
-//        val expected = "fragment viewerFragment on Viewer { login, name }"
-//
-//        val viewerFragment = fragment(name = "viewerFragment", on = Viewer::class) {
-//            login
-//            name
-//        }
-//
-//        assertEquals(expected, viewerFragment.toString())
-//    }
-//
-//    @Test
-//    fun when__fragment_is_define_together_with_aliases__then_generated_query_string_contains_fragment_and_aliases() {
-//        val expected = "fragment viewerFragment on Viewer { aLogin: login, myName: name, someEmail: email, aPullRequest: pullRequests(last:5) { nodes { body } } }"
-//
-//        val viewerFragment = fragment(name = "viewerFragment", on = Viewer::class) {
-//            login(alias = "aLogin")
-//            name(alias = "myName")
-//            email(alias = "someEmail")
-//            pullRequests(last = 5, alias = "aPullRequest") {
-//                nodes {
-//                    body
-//                }
-//            }
-//        }
-//
-//        assertEquals(expected, viewerFragment.toString())
-//    }
-//
-//    @Test
-//    fun when__fragment_is_used_in_query_then_resulting_string_contains_fragment_definition_and_usage() {
-//        val expected = "query { viewer { ...viewerFragment } } fragment viewerFragment on Viewer { login, name }"
-//
-//        val fragment = fragment(name = "viewerFragment", on = Viewer::class) {
-//            login
-//            name
-//        }
-//
-//        val result = query {
-//           viewer {
-//               useFragment(fragment)
-//           }
-//        }
-//
-//        assertEquals(expected, result)
-//    }
-//
-//    @Test
-//    fun when__fragment_is_used_twice_in_query__then_resulting_string_contains_two_usages_and_just_one_fragment_definition() {
-//        val expected = "query { aViewer: viewer { ...viewerFragment }, anotherViewer: viewer { ...viewerFragment } } fragment viewerFragment on UserType { login, name }"
-//
-//        val fragment = fragment(name = "viewerFragment", on = UserType::class) {
-//            login
-//            name
-//        }
-//
-//        val result = query {
-//            viewer(alias = "aViewer") {
-//                useFragment(fragment)
-//            }
-//            viewer(alias = "anotherViewer") {
-//                useFragment(fragment)
-//            }
-//        }
-//
-//        assertEquals(expected, result)
-//    }
+    @Test
+    fun when__fragment_is_defined__then_resulting_string_contains_fragment_syntax() {
+        val expected = "fragment viewerFragment on User { login, name }"
+
+        val viewerFragment = fragment(name = "viewerFragment", on = User::class) {
+            login
+            name
+        }
+
+        assertEquals(expected, viewerFragment.toString())
+    }
+
+    @Test
+    fun when__fragment_is_define_together_with_aliases__then_generated_query_string_contains_fragment_and_aliases() {
+        val expected = "fragment viewerFragment on User { aLogin: login, myName: name, someEmail: email, aPullRequest: pullRequests(last:5) { nodes { body } } }"
+
+        val viewerFragment = fragment(name = "viewerFragment", on = User::class) {
+            login(alias = "aLogin")
+            name(alias = "myName")
+            email(alias = "someEmail")
+            pullRequests(last = 5, alias = "aPullRequest") {
+                nodes {
+                    body
+                }
+            }
+        }
+
+        assertEquals(expected, viewerFragment.toString())
+    }
+
+    @Test
+    fun when__fragment_is_used_in_query_then_resulting_string_contains_fragment_definition_and_usage() {
+        val expected = "query { viewer { ...viewerFragment } } fragment viewerFragment on User { login, name }"
+
+        val fragment = fragment(name = "viewerFragment", on = User::class) {
+            login
+            name
+        }
+
+        val result = query {
+            viewer {
+                useFragment(fragment)
+            }
+        }
+
+        assertEquals(expected, result)
+    }
+
+    @Test
+    fun when__same_fragment_is_used_twice_in_query__then_resulting_string_contains_two_usages_and_just_one_fragment_definition() {
+        val expected = "query { aViewer: viewer { ...viewerFragment }, anotherViewer: viewer { ...viewerFragment } } fragment viewerFragment on User { login, name }"
+
+        val fragment = fragment(name = "viewerFragment", on = User::class) {
+            login
+            name
+        }
+
+        val result = query {
+            viewer(alias = "aViewer") {
+                useFragment(fragment)
+            }
+            viewer(alias = "anotherViewer") {
+                useFragment(fragment)
+            }
+        }
+
+        assertEquals(expected, result)
+    }
+
+    @Test
+    fun when__two_fragments_are_used_in_query__then_resulting_string_contains_two_usages_and_just_two_fragment_definitions() {
+        val expected = "query { aViewer: viewer { ...viewerFragment, pullRequests(first:5) { nodes { ...pullRequestFragment } } } } fragment viewerFragment on User { login, name } fragment pullRequestFragment on PullRequest { body, id }"
+
+        val userFragment = fragment(name = "viewerFragment", on = User::class) {
+            login
+            name
+        }
+
+        val pullRequestFragment = fragment(name = "pullRequestFragment", on = PullRequest::class) {
+            body
+            id
+        }
+
+        val result = query {
+            viewer(alias = "aViewer") {
+                useFragment(userFragment)
+                pullRequests(first = 5) {
+                    nodes {
+                        this.useFragment(pullRequestFragment)
+                    }
+                }
+            }
+        }
+
+        assertEquals(expected, result)
+    }
+
+    @Test
+    fun when__fragment_is_used_inside_another_fragment__then_resulting_string_contains_two_usages_and_just_two_fragment_definitions() {
+        val expected = "query { aViewer: viewer { ...viewerFragment } } fragment viewerFragment on User { login, name, pullRequests { nodes { ...pullRequestFragment } } } fragment pullRequestFragment on PullRequest { body, id }"
+
+        val pullRequestFragment = fragment(name = "pullRequestFragment", on = PullRequest::class) {
+            body
+            id
+        }
+
+        val userFragment = fragment(name = "viewerFragment", on = User::class) {
+            login
+            name
+            pullRequests(first = 5) {
+                nodes {
+                    useFragment(pullRequestFragment)
+                }
+            }
+        }
+
+        val result = query {
+            viewer(alias = "aViewer") {
+                useFragment(userFragment)
+            }
+        }
+
+        assertEquals(expected, result)
+    }
 }
