@@ -151,7 +151,7 @@ fragment viewerFragment on User {
 
 Kotlin:
 ```kotlin
-val fragment = fragment(name = "viewerFragment", on = User::class) {
+val userFragment = fragment(name = "viewerFragment", on = User::class) {
     login
     name
 }
