@@ -1,6 +1,12 @@
 package example
 
-import builder.*
+import builder.Field
+import builder.Interface
+import builder.Object
+import builder.ObjectType
+import builder.Query
+import builder.ScalarType
+import builder.set
 
 fun Query.viewer(alias: String? = null, init: Viewer.() -> Unit) = type.doInit(Viewer(alias = alias, parent = this), init)
 
