@@ -249,4 +249,58 @@ class KotlinClient {
 
         assertEquals(expected, result)
     }
+
+    @Test
+    fun when__field_inherited_from_one_interface_is_used__then_resulting_string_contains_that_field() {
+        val expected = "query { viewer { login } }"
+
+        val result = query {
+            viewer {
+                login
+            }
+        }
+
+        assertEquals(expected, result)
+    }
+
+    @Test
+    fun when__field_inherited_from_one_interface_is_used_with_alias__then_resulting_string_contains_that_field_with_alias() {
+        val expected = "query { viewer { fieldFromInterface: login } }"
+
+        val result = query {
+            viewer {
+                login("fieldFromInterface")
+            }
+        }
+
+        assertEquals(expected, result)
+    }
+
+    @Test
+    fun when__fields_inherited_from_two_interfaces_are_used__then_resulting_string_contains_those_fields() {
+        val expected = "query { viewer { login, id } }"
+
+        val result = query {
+            viewer {
+                login
+                id
+            }
+        }
+
+        assertEquals(expected, result)
+    }
+
+    @Test
+    fun when__fields_inherited_from_two_interfaces_are_used_with_aliases__then_resulting_string_contains_those_fields_with_aliases() {
+        val expected = "query { viewer { fromOneInterface: login, fromAnotherInterface: id } }"
+
+        val result = query {
+            viewer {
+                login("fromOneInterface")
+                id("fromAnotherInterface")
+            }
+        }
+
+        assertEquals(expected, result)
+    }
 }

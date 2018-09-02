@@ -24,10 +24,17 @@ open class ObjectType : ScalarType() {
     fun fieldsToString(): String = (if (fields.isEmpty()) "" else fields.joinToString(separator = ", ", prefix = " { ", postfix = " }"))
 
 }
+
+open class Interface {
+    fun <T : Field<*>> doInit(objectType : ObjectType, field: T, init: T.() -> Unit = {}): T {
+        objectType.doInit(field, init)
+
+        return field
+    }
+}
 // TODO: Add KDoc based on introspection results
 
 // TODO: Add support to directives (https://graphql.org/learn/queries/#directives)
-// TODO: Add support to interfaces (https://graphql.org/learn/schema/#interfaces)
 // TODO: Add support to inline fragments (https://graphql.org/learn/queries/#inline-fragments)
 // TODO: Add support to metafields (https://graphql.org/learn/queries/#meta-fields)
 open class Field<T : ScalarType>(val type: T, val fieldName: String, private val alias: String? = null) {
@@ -131,20 +138,38 @@ fun <T : ObjectType, O : Object<T>> O.useFragment(fragment: Fragment<T>) {
 
 fun Query.viewer(alias: String? = null, init: Viewer.() -> Unit) = type.doInit(Viewer(alias = alias, parent = this), init)
 
-open class User : ObjectType() {
+class ActorInterface : Interface() {
     class Login(alias: String? = null) : Field<ScalarType>(ScalarType(), "login", alias)
+
+    fun login(objectType: ObjectType, alias: String? = null) = doInit(objectType, Login(alias))
+}
+
+class NodeInterface : Interface() {
+    class Id(alias: String? = null) : Field<ScalarType>(ScalarType(), "id", alias)
+
+    fun id(objectType: ObjectType, alias: String? = null) = doInit(objectType, Id(alias))
+}
+
+open class User : ObjectType() {
+    private val actorInterface = ActorInterface()
+    private val nodeInterface = NodeInterface()
+
     class Email(alias: String? = null) : Field<ScalarType>(ScalarType(), "email", alias)
     class Name(alias: String? = null) : Field<ScalarType>(ScalarType(), "name", alias)
 
-    fun login(alias: String? = null) = doInit(Login(alias))
+    fun login(alias: String? = null) = actorInterface.login(this, alias)
+    fun id(alias: String? = null) = nodeInterface.id(this, alias)
     fun email(alias: String? = null) = doInit(Email(alias))
     fun name(alias: String? = null) = doInit(Name(alias))
 
+    var login: ActorInterface.Login? = null
+        get() = actorInterface.login(this)
+
+    var id: NodeInterface.Id? = null
+        get() = nodeInterface.id(this)
+
     var email: Email? = null
         get() = email()
-
-    var login: User.Login? = null
-        get() = login()
 
     var name: Name? = null
         get() = name()
@@ -158,14 +183,18 @@ open class User : ObjectType() {
 
 class Viewer(parent: Object<*>, alias: String? = null) : Object<User>(User(), parent, "viewer", alias) {
     fun login(alias: String? = null) = type.login(alias)
+    fun id(alias: String? = null) = type.id(alias)
     fun email(alias: String? = null) = type.email(alias)
     fun name(alias: String? = null) = type.name(alias)
 
+    var login: ActorInterface.Login? = null
+        get() = type.login
+
+    var id: NodeInterface.Id? = null
+        get() = type.id
+
     var email: User.Email? = null
         get() = type.email
-
-    var login: User.Login? = null
-        get() = type.login
 
     var name: User.Name? = null
         get() = type.name
