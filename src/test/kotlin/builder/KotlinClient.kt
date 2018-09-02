@@ -1,5 +1,8 @@
 package builder
 
+import example.PullRequest
+import example.User
+import example.viewer
 import org.junit.Assert.assertEquals
 import org.junit.Test
 
