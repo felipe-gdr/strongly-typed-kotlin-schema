@@ -5,7 +5,7 @@ import kotlin.reflect.full.createInstance
 
 open class ScalarType
 
-open class ObjectType : ScalarType() {
+open class Type : ScalarType() {
     val fields: MutableList<Field<*>> = ArrayList()
 
     fun <T : Field<*>> doInit(field: T, init: T.() -> Unit = {}): T {
@@ -26,8 +26,8 @@ open class ObjectType : ScalarType() {
 }
 
 open class Interface {
-    fun <T : Field<*>> doInit(objectType: ObjectType, field: T, init: T.() -> Unit = {}): T {
-        objectType.doInit(field, init)
+    fun <T : Field<*>> doInit(type: Type, field: T, init: T.() -> Unit = {}): T {
+        type.doInit(field, init)
 
         return field
     }
@@ -45,7 +45,7 @@ open class Field<T : ScalarType>(val type: T, val fieldName: String, private val
 
     override fun toString(): String {
         return "${if (alias != null) "$alias: " else ""}$fieldName${argumentsToString()}" +
-                if (type is ObjectType) type.fieldsToString() else ""
+                if (type is Type) type.fieldsToString() else ""
     }
 
     override fun equals(other: Any?): Boolean {
@@ -72,9 +72,9 @@ fun <T : Field<*>> T.set(name: String, value: Any?): T {
     return this
 }
 
-open class Object<T : ObjectType>(type: T, private val parent: Object<out ObjectType>? = null, name: String,
-                                  alias: String? = null) : Field<T>(type, name, alias) {
-    open fun addFragment(fragment: Fragment<out ObjectType>) {
+open class Object<T : Type>(type: T, private val parent: Object<out Type>? = null, name: String,
+                            alias: String? = null) : Field<T>(type, name, alias) {
+    open fun addFragment(fragment: Fragment<out Type>) {
         // TODO stop add references to parent with the single goal of supporting fragments.
         // maybe add a reference to the query all the way down the field tree
         parent?.addFragment(fragment)
@@ -96,13 +96,13 @@ class Argument(val name: String, private val value: Any) {
     override fun hashCode(): Int = name.hashCode()
 }
 
-class QueryType : ObjectType()
+class QueryType : Type()
 
 class Query(queryName: String?) :
         Object<QueryType>(QueryType(), name = "query${if (queryName != null) " $queryName" else ""}") {
-    private val fragments: MutableCollection<Fragment<out ObjectType>> = ArrayList()
+    private val fragments: MutableCollection<Fragment<out Type>> = ArrayList()
 
-    override fun addFragment(fragment: Fragment<out ObjectType>) {
+    override fun addFragment(fragment: Fragment<out Type>) {
         if (!fragments.contains(fragment)) {
             fragments.add(fragment)
         }
@@ -118,17 +118,17 @@ class Query(queryName: String?) :
 
 fun query(name: String? = null, init: Query.() -> Unit): String = Query(name).apply(init).toString()
 
-data class Fragment<T : ObjectType>(val name: String, val of: T) {
+data class Fragment<T : Type>(val name: String, val of: T) {
     override fun toString(): String {
         return "fragment $name on ${of::class.simpleName}${of.fieldsToString()}"
     }
 }
 
 // TODO add support to fragments that use fragments.
-fun <T : ObjectType> fragment(name: String, on: KClass<T>, init: T.() -> Unit): Fragment<T> =
+fun <T : Type> fragment(name: String, on: KClass<T>, init: T.() -> Unit): Fragment<T> =
         Fragment(name, of = on.createInstance().apply(init))
 
-fun <T : ObjectType, O : Object<T>> O.useFragment(fragment: Fragment<T>) {
+fun <T : Type, O : Object<T>> O.useFragment(fragment: Fragment<T>) {
     addFragment(fragment)
 
     type.fields.add(object : Field<ScalarType>(ScalarType(), fragment.name) {

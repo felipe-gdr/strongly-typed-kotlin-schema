@@ -3,7 +3,7 @@ package example
 import builder.Field
 import builder.Interface
 import builder.Object
-import builder.ObjectType
+import builder.Type
 import builder.Query
 import builder.ScalarType
 import builder.set
@@ -14,16 +14,16 @@ fun Query.viewer(alias: String? = null, init: Viewer.() -> Unit) =
 class ActorInterface : Interface() {
     class Login(alias: String? = null) : Field<ScalarType>(ScalarType(), "login", alias)
 
-    fun login(objectType: ObjectType, alias: String? = null) = doInit(objectType, Login(alias))
+    fun login(type: Type, alias: String? = null) = doInit(type, Login(alias))
 }
 
 class NodeInterface : Interface() {
     class Id(alias: String? = null) : Field<ScalarType>(ScalarType(), "id", alias)
 
-    fun id(objectType: ObjectType, alias: String? = null) = doInit(objectType, Id(alias))
+    fun id(type: Type, alias: String? = null) = doInit(type, Id(alias))
 }
 
-open class User : ObjectType() {
+open class User : Type() {
     private val actorInterface = ActorInterface()
     private val nodeInterface = NodeInterface()
 
@@ -77,7 +77,7 @@ class Viewer(parent: Object<*>, alias: String? = null) : Object<User>(User(), pa
             type.pullRequests(this, alias, first, last, init)
 }
 
-class PullRequestConnectionType : ObjectType() {
+class PullRequestConnectionType : Type() {
     fun nodes(parent: Object<*>, alias: String? = null, init: PullRequestNode.() -> Unit) =
             doInit(PullRequestNode(parent, alias), init)
 }
@@ -88,7 +88,7 @@ class PullRequestConnection(parent: Object<*>?, alias: String? = null) :
     fun nodes(alias: String? = null, init: PullRequestNode.() -> Unit) = type.nodes(this, alias, init)
 }
 
-class PullRequest : ObjectType() {
+class PullRequest : Type() {
     class Body(alias: String? = null) : Field<ScalarType>(ScalarType(), "body", alias)
     class Id(alias: String? = null) : Field<ScalarType>(ScalarType(), "id", alias)
 
