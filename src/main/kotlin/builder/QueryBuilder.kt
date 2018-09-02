@@ -27,9 +27,7 @@ open class Type : ScalarType() {
 
 open class Interface {
     fun <T : Field<*>> doInit(type: Type, field: T, init: T.() -> Unit = {}): T {
-        type.doInit(field, init)
-
-        return field
+        return type.doInit(field, init)
     }
 }
 // TODO: Add KDoc based on introspection results

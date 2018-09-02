@@ -289,4 +289,16 @@ class KotlinClient {
 
         assertEquals(expected, result)
     }
+
+    @Test
+    fun when__field_inherited_from_one_interface_is_used_passing_argument__then_resulting_string_contains_that_field_with_argument() {
+        val expected = "query { viewer { avatarUrl(size:100) } }"
+        val result = query {
+            viewer {
+                avatarUrl(size = 100)
+            }
+        }
+
+        assertEquals(expected, result)
+    }
 }

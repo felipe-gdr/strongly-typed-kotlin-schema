@@ -10,9 +10,10 @@ repositories {
 }
 
 dependencies {
+    compile "org.antlr:antlr4-runtime:4.7.1"
     compile "org.jetbrains.kotlin:kotlin-stdlib-jdk8"
-    testCompile "junit:junit:4.12"
     compile group: 'org.jetbrains.kotlin', name: 'kotlin-reflect', version: '1.2.60'
+    testCompile "junit:junit:4.12"
 }
 
 compileKotlin {

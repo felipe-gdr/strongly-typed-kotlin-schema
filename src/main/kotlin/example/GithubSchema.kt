@@ -3,18 +3,24 @@ package example
 import builder.Field
 import builder.Interface
 import builder.Object
-import builder.Type
 import builder.Query
 import builder.ScalarType
+import builder.Type
 import builder.set
 
 fun Query.viewer(alias: String? = null, init: Viewer.() -> Unit) =
         type.doInit(Viewer(alias = alias, parent = this), init)
 
+class URI : ScalarType()
+
+
 class ActorInterface : Interface() {
     class Login(alias: String? = null) : Field<ScalarType>(ScalarType(), "login", alias)
+    class AvatarUrl(alias: String? = null) : Field<URI>(URI(), "avatarUrl", alias)
 
     fun login(type: Type, alias: String? = null) = doInit(type, Login(alias))
+    fun avatarUrl(type: Type, size: Int? = null, alias: String? = null) =
+            doInit(type, AvatarUrl(alias)).set("size", size)
 }
 
 class NodeInterface : Interface() {
@@ -31,12 +37,16 @@ open class User : Type() {
     class Name(alias: String? = null) : Field<ScalarType>(ScalarType(), "name", alias)
 
     fun login(alias: String? = null) = actorInterface.login(this, alias)
+    fun avatarUrl(size: Int? = null, alias: String? = null) = actorInterface.avatarUrl(this, size, alias)
     fun id(alias: String? = null) = nodeInterface.id(this, alias)
     fun email(alias: String? = null) = doInit(Email(alias))
     fun name(alias: String? = null) = doInit(Name(alias))
 
     var login: ActorInterface.Login? = null
         get() = actorInterface.login(this)
+
+    var avatarUrl: ActorInterface.AvatarUrl? = null
+        get() = actorInterface.avatarUrl(this)
 
     var id: NodeInterface.Id? = null
         get() = nodeInterface.id(this)
@@ -56,12 +66,16 @@ open class User : Type() {
 
 class Viewer(parent: Object<*>, alias: String? = null) : Object<User>(User(), parent, "viewer", alias) {
     fun login(alias: String? = null) = type.login(alias)
+    fun avatarUrl(size: Int? = null, alias: String? = null) = type.avatarUrl(size, alias)
     fun id(alias: String? = null) = type.id(alias)
     fun email(alias: String? = null) = type.email(alias)
     fun name(alias: String? = null) = type.name(alias)
 
     var login: ActorInterface.Login? = null
         get() = type.login
+
+    var avatarUrl: ActorInterface.AvatarUrl? = null
+        get() = type.avatarUrl
 
     var id: NodeInterface.Id? = null
         get() = type.id
