@@ -84,4 +84,27 @@ fun avatarUrl(type: Type, size: Int? = 400, alias: String? = null) = doInit(type
 
         assertEquals(expected, result)
     }
+
+    @Test
+    fun when__type_is_defined__then_generated_code_contains_type_classes() {
+        val schema = """
+type User {
+  name: String
+}
+"""
+        val expected = """
+open class User : Type() {
+class Name(alias: String? = null) : Field<ScalarType>(ScalarType(), "name", alias)
+fun name(alias: String? = null) = doInit(Name(alias))
+var name: Name? = null
+get() = name()
+}
+""".trim()
+
+        val generator = Generator()
+
+        val result = generator.generate(schema).trim()
+
+        assertEquals(expected, result)
+    }
 }

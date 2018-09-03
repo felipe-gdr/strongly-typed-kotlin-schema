@@ -1,6 +1,7 @@
 package generator
 
-class FieldBuilder(val name: String) {
+class FieldBuilder(val name: String, private val isInterface: Boolean = false) {
+    private val className = name.capitalize()
     private val arguments = ArrayList<ArgumentBuilder>()
 
     fun addArgument(argumentBuilder: ArgumentBuilder):FieldBuilder {
@@ -8,18 +9,20 @@ class FieldBuilder(val name: String) {
         return this
     }
 
-    fun build(): String {
-        val className = name.capitalize()
+    fun buildClass(): String =
+            "class $className(alias: String? = null) : Field<ScalarType>(ScalarType(), \"$name\", alias)"
 
-        val classTemplate =  "class $className(alias: String? = null) : Field<ScalarType>(ScalarType(), \"$name\", alias)"
-        val functionTemplate = "fun $name(type: Type, " +
-                arguments.joinToString(","){it.buildFunctionArgs()} +
-                (if (arguments.isEmpty()) "" else ", ") +
-                "alias: String? = null) = doInit(type, $className(alias))" +
-                arguments.joinToString(",") {it.buildSetter()}
+    fun buildFunction(): String =
+            "fun $name(${if (isInterface) "type: Type, " else ""}" +
+            arguments.joinToString(","){it.buildFunctionArgs()} +
+            (if (arguments.isEmpty()) "" else ", ") +
+            "alias: String? = null) = doInit(${if (isInterface) "type, " else ""}$className(alias))" +
+            arguments.joinToString(",") {it.buildSetter()}
 
-        return "$classTemplate\n$functionTemplate"
-    }
+    fun buildGetter(): String =
+            """var $name: $className? = null
+get() = $name()
+""".trim()
 }
 
 class ArgumentBuilder(val name: String) {
