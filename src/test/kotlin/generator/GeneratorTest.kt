@@ -63,4 +63,25 @@ fun avatarUrl(type: Type, size: Int? = null, alias: String? = null) = doInit(typ
 
         assertEquals(expected, result)
     }
+
+    @Test
+    fun when__default_value_is_used_in_interface_field__then_default_value_is_present_in_generated_code() {
+        val schema = """
+interface Actor {
+  avatarUrl(size: Int = 400): String
+}
+"""
+        val expected = """
+class Actor : Interface() {
+class AvatarUrl(alias: String? = null) : Field<ScalarType>(ScalarType(), "avatarUrl", alias)
+fun avatarUrl(type: Type, size: Int? = 400, alias: String? = null) = doInit(type, AvatarUrl(alias)).set("size", size)
+}
+""".trim()
+
+        val generator = Generator()
+
+        val result = generator.generate(schema).trim()
+
+        assertEquals(expected, result)
+    }
 }

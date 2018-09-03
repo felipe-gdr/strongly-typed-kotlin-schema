@@ -20,8 +20,23 @@ class Listener : GraphQLBaseListener() {
         val builder = InterfaceBuilder(name)
 
         ctx.interfaceFieldSet().interfaceField()
-                .map { it.name().text }
-                .forEach { builder.addField(it)}
+                .forEach { field ->
+                    val fieldBuilder = FieldBuilder(field.name().text)
+
+                    field.typeArguments()?.typeArgument()?.forEach { argument ->
+                        val argumentName = argument.name().text
+                        val type = argument.type().typeName().text
+                        val defaultValue = argument.defaultValue()?.value()?.text
+
+                        val argumentBuilder = ArgumentBuilder(argumentName)
+                                .type(type)
+                                .defaultValue(defaultValue)
+
+                        fieldBuilder.addArgument(argumentBuilder)
+                    }
+
+                    builder.addField(fieldBuilder)
+                }
 
         stringBuilder.append(builder.build()).append("\n")
     }

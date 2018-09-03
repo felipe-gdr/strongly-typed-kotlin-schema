@@ -69,14 +69,6 @@ interfaceField
    : name typeArguments? ':' type
    ;
 
-//interfaceArguments
-//   : '(' interfaceArgument ( ','? interfaceArgument )* ')'
-//   ;
-//
-//interfaceArgument
-//   : name ':' type
-//   ;
-
 // Union
 unionDefinition
    : 'union' name '=' unionMember '|' unionMember ('|' unionMember)*
