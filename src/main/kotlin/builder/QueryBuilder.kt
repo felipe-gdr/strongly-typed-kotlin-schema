@@ -5,6 +5,9 @@ import kotlin.reflect.full.createInstance
 
 open class ScalarType
 
+@DslMarker
+annotation class QueryTagMarker
+
 open class Type : ScalarType() {
     val fields: MutableList<Field<*>> = ArrayList()
 
@@ -35,6 +38,7 @@ open class Interface {
 // TODO: Add support to directives (https://graphql.org/learn/queries/#directives)
 // TODO: Add support to inline fragments (https://graphql.org/learn/queries/#inline-fragments)
 // TODO: Add support to metafields (https://graphql.org/learn/queries/#meta-fields)
+@QueryTagMarker
 open class Field<T : ScalarType>(val type: T, val fieldName: String, private val alias: String? = null) {
     val arguments: MutableList<Argument> = ArrayList()
 

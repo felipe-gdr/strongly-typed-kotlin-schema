@@ -51,11 +51,9 @@ class KotlinClient {
         query {
             viewer {
                 login
+                login
                 name
                 email
-                pullRequests(last = 5) {
-                    login
-                }
             }
         }
     }
