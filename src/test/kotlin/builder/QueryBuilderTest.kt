@@ -4,9 +4,10 @@ import example.PullRequest
 import example.User
 import example.viewer
 import org.junit.Assert.assertEquals
+import org.junit.Ignore
 import org.junit.Test
 
-class KotlinClient {
+class QueryBuilderTest {
     @Test
     fun when__structure_is_correct__then_string_is_correctly_built() {
         val expected = "query { viewer { login, name, email, pullRequests(last:5) { nodes { body, id } } } }"
@@ -213,6 +214,7 @@ class KotlinClient {
     }
 
     @Test
+    @Ignore
     fun when__fragment_is_used_inside_another_fragment__then_resulting_string_contains_two_usages_and_just_two_fragment_definitions() {
         val expected =
                 "query { aViewer: viewer { ...viewerFragment } } fragment viewerFragment on User { login, name, pullRequests { nodes { ...pullRequestFragment } } } fragment pullRequestFragment on PullRequest { body, id }"
