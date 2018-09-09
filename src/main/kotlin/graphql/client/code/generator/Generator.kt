@@ -1,4 +1,4 @@
-package generator
+package graphql.client.code.generator
 
 import antlr.tool.GraphQLLexer
 import antlr.tool.GraphQLParser

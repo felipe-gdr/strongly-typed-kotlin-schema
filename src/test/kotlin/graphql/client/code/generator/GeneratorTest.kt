@@ -1,4 +1,4 @@
-package generator
+package graphql.client.code.generator
 
 import org.junit.Assert.assertEquals
 import org.junit.Test
@@ -31,8 +31,8 @@ interface Actor {
 """
         val expected = """
 class Actor : Interface() {
-class AvatarUrl(alias: String? = null) : Field<ScalarType>(ScalarType(), "avatarUrl", alias)
-fun avatarUrl(type: Type, alias: String? = null) = doInit(type, AvatarUrl(alias))
+    class AvatarUrl(alias: String? = null) : Field<ScalarType>(ScalarType(), "avatarUrl", alias)
+    fun avatarUrl(type: Type, alias: String? = null) = doInit(type, AvatarUrl(alias))
 }
 """.trim()
 
@@ -52,8 +52,8 @@ interface Actor {
 """
         val expected = """
 class Actor : Interface() {
-class AvatarUrl(alias: String? = null) : Field<ScalarType>(ScalarType(), "avatarUrl", alias)
-fun avatarUrl(type: Type, size: Int? = null, alias: String? = null) = doInit(type, AvatarUrl(alias)).set("size", size)
+    class AvatarUrl(alias: String? = null) : Field<ScalarType>(ScalarType(), "avatarUrl", alias)
+    fun avatarUrl(type: Type, size: Int? = null, alias: String? = null) = doInit(type, AvatarUrl(alias)).set("size", size)
 }
 """.trim()
 
@@ -73,8 +73,8 @@ interface Actor {
 """
         val expected = """
 class Actor : Interface() {
-class AvatarUrl(alias: String? = null) : Field<ScalarType>(ScalarType(), "avatarUrl", alias)
-fun avatarUrl(type: Type, size: Int? = 400, alias: String? = null) = doInit(type, AvatarUrl(alias)).set("size", size)
+    class AvatarUrl(alias: String? = null) : Field<ScalarType>(ScalarType(), "avatarUrl", alias)
+    fun avatarUrl(type: Type, size: Int? = 400, alias: String? = null) = doInit(type, AvatarUrl(alias)).set("size", size)
 }
 """.trim()
 
@@ -94,10 +94,10 @@ type User {
 """
         val expected = """
 open class User : Type() {
-class Name(alias: String? = null) : Field<ScalarType>(ScalarType(), "name", alias)
-fun name(alias: String? = null) = doInit(Name(alias))
-var name: Name? = null
-get() = name()
+    class Name(alias: String? = null) : Field<ScalarType>(ScalarType(), "name", alias)
+    fun name(alias: String? = null) = doInit(Name(alias))
+    var name: Name? = null
+        get() = name()
 }
 """.trim()
 

@@ -1,4 +1,4 @@
-package generator
+package graphql.client.code.generator
 
 import antlr.tool.GraphQLBaseListener;
 import antlr.tool.GraphQLParser
@@ -21,7 +21,7 @@ class Listener : GraphQLBaseListener() {
 
         ctx.interfaceFieldSet().interfaceField()
                 .forEach { field ->
-                    val fieldBuilder = FieldBuilder(field.name().text, true)
+                    val fieldBuilder = FieldBuilder(field.name().text)
 
                     field.typeArguments()?.typeArgument()?.forEach { argument ->
                         val argumentBuilder = buildArgument(argument)

@@ -1,18 +1,11 @@
 package example
 
-import builder.Field
-import builder.Interface
-import builder.Object
-import builder.Query
-import builder.ScalarType
-import builder.Type
-import builder.set
+import builder.*
 
 fun Query.viewer(alias: String? = null, init: Viewer.() -> Unit) =
         type.doInit(Viewer(alias = alias, parent = this), init)
 
 class URI : ScalarType()
-
 
 class ActorInterface : Interface() {
     class Login(alias: String? = null) : Field<ScalarType>(ScalarType(), "login", alias)
