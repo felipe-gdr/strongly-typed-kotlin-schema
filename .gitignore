@@ -3,5 +3,4 @@ build
 out
 target
 .idea
-gradle
 *.iml
